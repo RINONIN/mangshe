@@ -3,10 +3,10 @@
 日期: 2021年09月14日
 """
 
-<<<<<<< HEAD
+
 print('hello world')
-=======
-import sys
+
+
 import requests
 
 # print('hello world')
@@ -18,4 +18,4 @@ import requests
 # 三方库引用
 response = requests.get("http://www.baidu.com")
 print(response.text)
->>>>>>> a50127e (Initial commit)
+
