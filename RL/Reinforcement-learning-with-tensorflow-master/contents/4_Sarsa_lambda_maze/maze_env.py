@@ -1,10 +1,14 @@
 """
 Reinforcement learning maze example.
+
 Red rectangle:          explorer.
 Black rectangles:       hells       [reward = -1].
 Yellow bin circle:      paradise    [reward = +1].
 All other states:       ground      [reward = 0].
-This script is the environment part of this example. The RL is in RL_brain.py.
+
+This script is the environment part of this example.
+The RL is in RL_brain.py.
+
 View more on my tutorial page: https://morvanzhou.github.io/tutorials/
 """
 
@@ -125,21 +129,7 @@ class Maze(tk.Tk, object):
         return s_, reward, done
 
     def render(self):
-        time.sleep(0.1)
+        time.sleep(0.05)
         self.update()
 
 
-def update():
-    for t in range(10):
-        s = env.reset()
-        while True:
-            env.render()
-            a = 1
-            s, r, done = env.step(a)
-            if done:
-                break
-
-if __name__ == '__main__':
-    env = Maze()
-    env.after(100, update)
-    env.mainloop()

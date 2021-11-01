@@ -6,20 +6,16 @@ Black rectangles:       hells       [reward = -1].
 Yellow bin circle:      paradise    [reward = +1].
 All other states:       ground      [reward = 0].
 
-This script is the environment part of this example.
-The RL is in RL_brain.py.
+This script is the environment part of this example. The RL is in RL_brain.py.
 
 View more on my tutorial page: https://morvanzhou.github.io/tutorials/
 """
 
 
 import numpy as np
+np.random.seed(1)
+import tkinter as tk
 import time
-import sys
-if sys.version_info.major == 2:
-    import Tkinter as tk
-else:
-    import tkinter as tk
 
 
 UNIT = 40   # pixels
@@ -46,7 +42,7 @@ class Maze(tk.Tk, object):
             x0, y0, x1, y1 = c, 0, c, MAZE_H * UNIT
             self.canvas.create_line(x0, y0, x1, y1)
         for r in range(0, MAZE_H * UNIT, UNIT):
-            x0, y0, x1, y1 = 0, r, MAZE_W * UNIT, r
+            x0, y0, x1, y1 = 0, r, MAZE_H * UNIT, r
             self.canvas.create_line(x0, y0, x1, y1)
 
         # create origin
@@ -117,11 +113,9 @@ class Maze(tk.Tk, object):
         if s_ == self.canvas.coords(self.oval):
             reward = 1
             done = True
-            s_ = 'terminal'
         elif s_ in [self.canvas.coords(self.hell1), self.canvas.coords(self.hell2)]:
             reward = -1
             done = True
-            s_ = 'terminal'
         else:
             reward = 0
             done = False
@@ -129,6 +123,7 @@ class Maze(tk.Tk, object):
         return s_, reward, done
 
     def render(self):
-        time.sleep(0.1)
+        # time.sleep(0.1)
         self.update()
+
 
