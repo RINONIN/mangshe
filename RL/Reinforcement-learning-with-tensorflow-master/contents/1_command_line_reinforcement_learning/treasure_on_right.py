@@ -11,7 +11,10 @@ import pandas as pd
 import time
 
 np.random.seed(2)  # reproducible
-
+# seed( ) 用于指定随机数生成时所用算法开始的整数值。
+# 1.如果使用相同的seed( )值，则每次生成的随即数都相同；
+# 2.如果不设置这个值，则系统根据时间来自己选择这个值，此时每次生成的随机数因时间差异而不同。
+# 3.设置的seed()值仅一次有效
 
 N_STATES = 6   # the length of the 1 dimensional world
 ACTIONS = ['left', 'right']     # available actions
@@ -37,7 +40,8 @@ def choose_action(state, q_table):
     if (np.random.uniform() > EPSILON) or ((state_actions == 0).all()):  # act non-greedy or state-action have no value
         action_name = np.random.choice(ACTIONS)
     else:   # act greedy
-        action_name = state_actions.idxmax()    # replace argmax to idxmax as argmax means a different function in newer version of pandas
+        action_name = state_actions.idxmax()
+        # replace argmax to idxmax as argmax means a different function in newer version of pandas
     return action_name
 
 
