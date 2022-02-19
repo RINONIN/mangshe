@@ -16,38 +16,38 @@ np.random.seed(2)  # reproducible
 # 2.如果不设置这个值，则系统根据时间来自己选择这个值，此时每次生成的随机数因时间差异而不同。
 # 3.设置的seed()值仅一次有效
 
-N_STATES = 6   # the length of the 1 dimensional world
-ACTIONS = ['left', 'right']     # available actions
-EPSILON = 0.8   # greedy police
-ALPHA = 0.1     # learning rate
-GAMMA = 0.9    # discount factor
-MAX_EPISODES = 10   # maximum episodes
-FRESH_TIME = 0.3    # fresh time for one move
+N_STATES = 6   # 一维世界的长度
+ACTIONS = ['left', 'right']     # 可选择的动作
+EPSILON = 0.8   # 贪婪率，80%选择最优
+ALPHA = 0.1     # 学习率
+GAMMA = 0.9    # 奖励衰减率
+MAX_EPISODES = 10   # 最大代数
+FRESH_TIME = 0.05    # 执行一个动作的时长
 
 
 def build_q_table(n_states, actions):
     table = pd.DataFrame(
-        np.zeros((n_states, len(actions))),     # q_table initial values, build a 6*2 array
-        columns=actions,    # actions' s name
+        np.zeros((n_states, len(actions))),     # q_table 初始化为0 , 建立一个 6*2 的矩阵
+        columns=actions,    # 动作名称
     )
-    # print(table)    # show table
+    # print(table)    # 显示 q_table
     return table
 
 
 def choose_action(state, q_table):
-    # This is how to choose an action
+    # 动作选择
     state_actions = q_table.iloc[state, :]  # 提取指定行列的数据
-    if (np.random.uniform() > EPSILON) or ((state_actions == 0).all()):  # act non-greedy or state-action have no value
+    if (np.random.uniform() > EPSILON) or ((state_actions == 0).all()):  # 执行非贪婪准则，随机选择动作
         action_name = np.random.choice(ACTIONS)
-    else:   # act greedy
+    else:   # 执行贪婪准则
         action_name = state_actions.idxmax()  # 返回取到最大值的索引 默认是列（其中括号中的axis=0是列，axis=1是行）
         # replace argmax to idxmax as argmax means a different function in newer version of pandas
     return action_name
 
 
 def get_env_feedback(S, A):
-    # This is how agent will interact with the environment
-    if A == 'right':    # move right
+    # 环境反馈
+    if A == 'right':    # 向右移动
         if S == N_STATES - 2:   # terminate
             S_ = 'terminal'
             R = 1
@@ -64,7 +64,7 @@ def get_env_feedback(S, A):
 
 
 def update_env(S, episode, step_counter):
-    # This is how environment be updated
+    # 环境更新
     env_list = ['-']*(N_STATES-1) + ['T']   # '-----T' our environment
     if S == 'terminal':
         interaction = 'Episode %s: total_steps = %s' % (episode+1, step_counter)
@@ -79,7 +79,7 @@ def update_env(S, episode, step_counter):
 
 
 def rl():
-    # main part of RL loop
+    # 强化学习主循环
     q_table = build_q_table(N_STATES, ACTIONS)
     for episode in range(1, MAX_EPISODES):
         step_counter = 0
@@ -89,16 +89,16 @@ def rl():
         while not is_terminated:
 
             A = choose_action(S, q_table)
-            S_, R = get_env_feedback(S, A)  # take action & get next state and reward
+            S_, R = get_env_feedback(S, A)  # 采取行动 & 获取下一步的状态和奖励
             q_predict = q_table.loc[S, A]
             if S_ != 'terminal':
-                q_target = R + GAMMA * q_table.iloc[S_, :].max()   # next state is not terminal
+                q_target = R + GAMMA * q_table.iloc[S_, :].max()   # 下一个状态不是终点
             else:
-                q_target = R     # next state is terminal
-                is_terminated = True    # terminate this episode
+                q_target = R     # 下一个状态是终点
+                is_terminated = True    # 终止该回合
 
-            q_table.loc[S, A] += ALPHA * (q_target - q_predict)  # update
-            S = S_  # move to next state
+            q_table.loc[S, A] += ALPHA * (q_target - q_predict)  # 更新
+            S = S_  # 移动到下一状态
 
             update_env(S, episode, step_counter+1)
             step_counter += 1

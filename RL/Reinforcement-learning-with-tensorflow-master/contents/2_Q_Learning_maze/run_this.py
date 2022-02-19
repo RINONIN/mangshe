@@ -2,7 +2,7 @@
 Reinforcement learning maze example.
 
 Red rectangle:          explorer.
-Black rectangles:       hells       [reward = -1].
+Black rectangles:       hell        [reward = -1].
 Yellow bin circle:      paradise    [reward = +1].
 All other states:       ground      [reward = 0].
 
@@ -44,6 +44,7 @@ def update():
     # end of game
     print('game over')
     env.destroy()
+
 
 if __name__ == "__main__":
     env = Maze()

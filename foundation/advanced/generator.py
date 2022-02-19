@@ -25,13 +25,35 @@
 # for i in need_return():
 #     print("我在外面接到了一个 item=%d\n" % i)
 
-def need_return():
-    tmp = 2
-    for item in range(300):
-        if item == tmp:
-            tmp *= item
-            yield item
+# def need_return(init_value):
+#     tmp = init_value
+#     for item in range(300):
+#         if item == tmp:
+#             tmp *= 2
+#             yield item
+#
+#
+# for i in need_return(10):
+#     print(i)
 
 
-for i in need_return():
+class NeedReturn:
+    def __init__(self, init_value=0):
+        self.tmp = init_value
+        self.item = 0
+
+    def __iter__(self):
+        return self
+
+    def __next__(self):
+        while True:
+            if self.item == self.tmp:
+                self.tmp *= 2
+                return self.item
+            self.item += 1
+            if self.item == 300:
+                raise StopIteration
+
+
+for i in NeedReturn(10):
     print(i)
