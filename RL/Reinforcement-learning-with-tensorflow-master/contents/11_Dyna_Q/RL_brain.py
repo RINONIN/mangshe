@@ -16,7 +16,7 @@ class QLearningTable:
         self.gamma = reward_decay
         self.epsilon = e_greedy
 
-        ## argmax type error
+        # argmax type error
         self.q_table = pd.DataFrame(columns=self.actions).astype('float32')
 
     def choose_action(self, observation):
@@ -25,13 +25,11 @@ class QLearningTable:
         if np.random.uniform() < self.epsilon:
             # choose best action
 
-
             # state_action = self.q_table.ix[observation, :]
-            state_action = self.q_table.loc[observation, :]             # for label indexing
-            state_action = state_action.reindex(np.random.permutation(state_action.index))     # some actions have same value
+            state_action = self.q_table.loc[observation, :]  # for label indexing
+            state_action = state_action.reindex(
+                np.random.permutation(state_action.index))  # some actions have same value
             action = state_action.argmax()
-
-
         else:
             # choose random action
             action = np.random.choice(self.actions)
@@ -52,7 +50,7 @@ class QLearningTable:
             # append new state to q table
             self.q_table = self.q_table.append(
                 pd.Series(
-                    [0]*len(self.actions),
+                    [0] * len(self.actions),
                     index=self.q_table.columns,
                     name=state,
                 )
@@ -62,6 +60,7 @@ class QLearningTable:
 class EnvModel:
     """Similar to the memory buffer in DQN, you can store past experiences in here.
     Alternatively, the model can generate next state and reward signal accurately."""
+
     def __init__(self, actions):
         # the simplest case is to think about the model is a memory which has all past transition information
         self.actions = actions
@@ -79,7 +78,7 @@ class EnvModel:
 
     def sample_s_a(self):
         s = np.random.choice(self.database.index)
-        a = np.random.choice(self.database.loc[s].dropna().index)    # filter out the None value
+        a = np.random.choice(self.database.loc[s].dropna().index)  # filter out the None value
         return s, a
 
     def get_r_s_(self, s, a):

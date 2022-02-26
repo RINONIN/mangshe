@@ -16,19 +16,21 @@ import tensorflow as tf
 import numpy as np
 import gym
 
+tf.compat.v1.disable_eager_execution()
+
 np.random.seed(2)
-tf.set_random_seed(2)  # reproducible
+tf.compat.v1.set_random_seed(2)  # reproducible
 
 
 class Actor(object):
     def __init__(self, sess, n_features, action_bound, lr=0.0001):
         self.sess = sess
 
-        self.s = tf.placeholder(tf.float32, [1, n_features], "state")
-        self.a = tf.placeholder(tf.float32, None, name="act")
-        self.td_error = tf.placeholder(tf.float32, None, name="td_error")  # TD_error
+        self.s = tf.compat.v1.placeholder(tf.float32, [1, n_features], "state")
+        self.a = tf.compat.v1.placeholder(tf.float32, None, name="act")
+        self.td_error = tf.compat.v1.placeholder(tf.float32, None, name="td_error")  # TD_error
 
-        l1 = tf.layers.dense(
+        l1 = tf.compat.v1.layers.dense(
             inputs=self.s,
             units=30,  # number of hidden units
             activation=tf.nn.relu,
@@ -37,7 +39,7 @@ class Actor(object):
             name='l1'
         )
 
-        mu = tf.layers.dense(
+        mu = tf.compat.v1.layers.dense(
             inputs=l1,
             units=1,  # number of hidden units
             activation=tf.nn.tanh,
@@ -46,7 +48,7 @@ class Actor(object):
             name='mu'
         )
 
-        sigma = tf.layers.dense(
+        sigma = tf.compat.v1.layers.dense(
             inputs=l1,
             units=1,  # output units
             activation=tf.nn.softplus,  # get action probabilities
@@ -56,8 +58,8 @@ class Actor(object):
         )
         global_step = tf.Variable(0, trainable=False)
         # self.e = epsilon = tf.train.exponential_decay(2., global_step, 1000, 0.9)
-        self.mu, self.sigma = tf.squeeze(mu*2), tf.squeeze(sigma+0.1)
-        self.normal_dist = tf.distributions.Normal(self.mu, self.sigma)
+        self.mu, self.sigma = tf.squeeze(mu * 2), tf.squeeze(sigma + 0.1)
+        self.normal_dist = tf.compat.v1.distributions.Normal(self.mu, self.sigma)
 
         self.action = tf.clip_by_value(self.normal_dist.sample(1), action_bound[0], action_bound[1])
 
@@ -65,10 +67,10 @@ class Actor(object):
             log_prob = self.normal_dist.log_prob(self.a)  # loss without advantage
             self.exp_v = log_prob * self.td_error  # advantage (TD_error) guided loss
             # Add cross entropy cost to encourage exploration
-            self.exp_v += 0.01*self.normal_dist.entropy()
+            self.exp_v += 0.01 * self.normal_dist.entropy()
 
         with tf.name_scope('train'):
-            self.train_op = tf.train.AdamOptimizer(lr).minimize(-self.exp_v, global_step)    # min(v) = max(-v)
+            self.train_op = tf.compat.v1.train.AdamOptimizer(lr).minimize(-self.exp_v, global_step)  # min(v) = max(-v)
 
     def learn(self, s, a, td):
         s = s[np.newaxis, :]
@@ -85,12 +87,12 @@ class Critic(object):
     def __init__(self, sess, n_features, lr=0.01):
         self.sess = sess
         with tf.name_scope('inputs'):
-            self.s = tf.placeholder(tf.float32, [1, n_features], "state")
-            self.v_ = tf.placeholder(tf.float32, [1, 1], name="v_next")
-            self.r = tf.placeholder(tf.float32, name='r')
+            self.s = tf.compat.v1.placeholder(tf.float32, [1, n_features], "state")
+            self.v_ = tf.compat.v1.placeholder(tf.float32, [1, 1], name="v_next")
+            self.r = tf.compat.v1.placeholder(tf.float32, name='r')
 
-        with tf.variable_scope('Critic'):
-            l1 = tf.layers.dense(
+        with tf.compat.v1.variable_scope('Critic'):
+            l1 = tf.compat.v1.layers.dense(
                 inputs=self.s,
                 units=30,  # number of hidden units
                 activation=tf.nn.relu,
@@ -99,7 +101,7 @@ class Critic(object):
                 name='l1'
             )
 
-            self.v = tf.layers.dense(
+            self.v = tf.compat.v1.layers.dense(
                 inputs=l1,
                 units=1,  # output units
                 activation=None,
@@ -108,18 +110,18 @@ class Critic(object):
                 name='V'
             )
 
-        with tf.variable_scope('squared_TD_error'):
+        with tf.compat.v1.variable_scope('squared_TD_error'):
             self.td_error = tf.reduce_mean(self.r + GAMMA * self.v_ - self.v)
-            self.loss = tf.square(self.td_error)    # TD_error = (r+gamma*V_next) - V_eval
-        with tf.variable_scope('train'):
-            self.train_op = tf.train.AdamOptimizer(lr).minimize(self.loss)
+            self.loss = tf.square(self.td_error)  # TD_error = (r+gamma*V_next) - V_eval
+        with tf.compat.v1.variable_scope('train'):
+            self.train_op = tf.compat.v1.train.AdamOptimizer(lr).minimize(self.loss)
 
     def learn(self, s, r, s_):
         s, s_ = s[np.newaxis, :], s_[np.newaxis, :]
 
         v_ = self.sess.run(self.v, {self.s: s_})
         td_error, _ = self.sess.run([self.td_error, self.train_op],
-                                          {self.s: s, self.v_: v_, self.r: r})
+                                    {self.s: s, self.v_: v_, self.r: r})
         return td_error
 
 
@@ -129,8 +131,8 @@ MAX_EP_STEPS = 200
 DISPLAY_REWARD_THRESHOLD = -100  # renders environment if total episode reward is greater then this threshold
 RENDER = False  # rendering wastes time
 GAMMA = 0.9
-LR_A = 0.001    # learning rate for actor
-LR_C = 0.01     # learning rate for critic
+LR_A = 0.001  # learning rate for actor
+LR_C = 0.01  # learning rate for critic
 
 env = gym.make('Pendulum-v0')
 env.seed(1)  # reproducible
@@ -139,15 +141,15 @@ env = env.unwrapped
 N_S = env.observation_space.shape[0]
 A_BOUND = env.action_space.high
 
-sess = tf.Session()
+sess = tf.compat.v1.Session()
 
 actor = Actor(sess, n_features=N_S, lr=LR_A, action_bound=[-A_BOUND, A_BOUND])
 critic = Critic(sess, n_features=N_S, lr=LR_C)
 
-sess.run(tf.global_variables_initializer())
+sess.run(tf.compat.v1.global_variables_initializer())
 
 if OUTPUT_GRAPH:
-    tf.summary.FileWriter("logs/", sess.graph)
+    tf.compat.v1.summary.FileWriter("logs/", sess.graph)
 
 for i_episode in range(MAX_EPISODE):
     s = env.reset()
@@ -176,4 +178,3 @@ for i_episode in range(MAX_EPISODE):
             if running_reward > DISPLAY_REWARD_THRESHOLD: RENDER = True  # rendering
             print("episode:", i_episode, "  reward:", int(running_reward))
             break
-

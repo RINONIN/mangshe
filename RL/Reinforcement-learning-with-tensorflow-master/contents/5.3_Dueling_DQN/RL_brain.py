@@ -10,9 +10,10 @@ gym: 0.8.0
 
 import numpy as np
 import tensorflow as tf
+tf.compat.v1.disable_eager_execution()
 
 np.random.seed(1)
-tf.set_random_seed(1)
+tf.compat.v1.set_random_seed(1)
 
 
 class DuelingDQN:
@@ -42,72 +43,73 @@ class DuelingDQN:
         self.epsilon_increment = e_greedy_increment
         self.epsilon = 0 if e_greedy_increment is not None else self.epsilon_max
 
-        self.dueling = dueling      # decide to use dueling DQN or not
+        self.dueling = dueling      # 会建立两个 DQN, 其中一个是 Dueling DQN
 
         self.learn_step_counter = 0
         self.memory = np.zeros((self.memory_size, n_features*2+2))
         self._build_net()
-        t_params = tf.get_collection('target_net_params')
-        e_params = tf.get_collection('eval_net_params')
-        self.replace_target_op = [tf.assign(t, e) for t, e in zip(t_params, e_params)]
+        t_params = tf.compat.v1.get_collection('target_net_params')
+        e_params = tf.compat.v1.get_collection('eval_net_params')
+        self.replace_target_op = [tf.compat.v1.assign(t, e) for t, e in zip(t_params, e_params)]
 
-        if sess is None:
-            self.sess = tf.Session()
-            self.sess.run(tf.global_variables_initializer())
+        if sess is None:  # 针对建立两个 DQN 的模式修改了 tf.Session() 的建立方式
+            self.sess = tf.compat.v1.Session()
+            self.sess.run(tf.compat.v1.global_variables_initializer())
         else:
             self.sess = sess
         if output_graph:
-            tf.summary.FileWriter("logs/", self.sess.graph)
+            tf.compat.v1.summary.FileWriter("logs/", self.sess.graph)
         self.cost_his = []
 
     def _build_net(self):
         def build_layers(s, c_names, n_l1, w_initializer, b_initializer):
-            with tf.variable_scope('l1'):
-                w1 = tf.get_variable('w1', [self.n_features, n_l1], initializer=w_initializer, collections=c_names)
-                b1 = tf.get_variable('b1', [1, n_l1], initializer=b_initializer, collections=c_names)
+            with tf.compat.v1.variable_scope('l1'):   # 第一层, 两种 DQN 都一样
+                w1 = tf.compat.v1.get_variable('w1', [self.n_features, n_l1], initializer=w_initializer, collections=c_names)
+                b1 = tf.compat.v1.get_variable('b1', [1, n_l1], initializer=b_initializer, collections=c_names)
                 l1 = tf.nn.relu(tf.matmul(s, w1) + b1)
 
             if self.dueling:
                 # Dueling DQN
-                with tf.variable_scope('Value'):
-                    w2 = tf.get_variable('w2', [n_l1, 1], initializer=w_initializer, collections=c_names)
-                    b2 = tf.get_variable('b2', [1, 1], initializer=b_initializer, collections=c_names)
+                with tf.compat.v1.variable_scope('Value'):  # 专门分析 state 的 Value
+                    w2 = tf.compat.v1.get_variable('w2', [n_l1, 1], initializer=w_initializer, collections=c_names)
+                    b2 = tf.compat.v1.get_variable('b2', [1, 1], initializer=b_initializer, collections=c_names)
                     self.V = tf.matmul(l1, w2) + b2
 
-                with tf.variable_scope('Advantage'):
-                    w2 = tf.get_variable('w2', [n_l1, self.n_actions], initializer=w_initializer, collections=c_names)
-                    b2 = tf.get_variable('b2', [1, self.n_actions], initializer=b_initializer, collections=c_names)
+                with tf.compat.v1.variable_scope('Advantage'):   # 专门分析每种动作的 Advantage
+                    w2 = tf.compat.v1.get_variable('w2', [n_l1, self.n_actions], initializer=w_initializer, collections=c_names)
+                    b2 = tf.compat.v1.get_variable('b2', [1, self.n_actions], initializer=b_initializer, collections=c_names)
                     self.A = tf.matmul(l1, w2) + b2
 
-                with tf.variable_scope('Q'):
+                with tf.compat.v1.variable_scope('Q'):  # 合并 V 和 A, 为了不让 A 直接学成了 Q, 我们减掉了 A 的均值
                     out = self.V + (self.A - tf.reduce_mean(self.A, axis=1, keep_dims=True))     # Q = V(s) + A(s,a)
             else:
-                with tf.variable_scope('Q'):
-                    w2 = tf.get_variable('w2', [n_l1, self.n_actions], initializer=w_initializer, collections=c_names)
-                    b2 = tf.get_variable('b2', [1, self.n_actions], initializer=b_initializer, collections=c_names)
+                with tf.compat.v1.variable_scope('Q'):  # 普通的 DQN 第二层
+                    w2 = tf.compat.v1.get_variable('w2', [n_l1, self.n_actions], initializer=w_initializer, collections=c_names)
+                    b2 = tf.compat.v1.get_variable('b2', [1, self.n_actions], initializer=b_initializer, collections=c_names)
                     out = tf.matmul(l1, w2) + b2
 
             return out
 
         # ------------------ build evaluate_net ------------------
-        self.s = tf.placeholder(tf.float32, [None, self.n_features], name='s')  # input
-        self.q_target = tf.placeholder(tf.float32, [None, self.n_actions], name='Q_target')  # for calculating loss
-        with tf.variable_scope('eval_net'):
+        self.s = tf.compat.v1.placeholder(tf.float32, [None, self.n_features], name='s')  # input
+        self.q_target = tf.compat.v1.placeholder(tf.float32, [None, self.n_actions], name='Q_target')  # for
+        # calculating loss
+        with tf.compat.v1.variable_scope('eval_net'):
             c_names, n_l1, w_initializer, b_initializer = \
-                ['eval_net_params', tf.GraphKeys.GLOBAL_VARIABLES], 20, \
+                ['eval_net_params', tf.compat.v1.GraphKeys.GLOBAL_VARIABLES], 20, \
                 tf.random_normal_initializer(0., 0.3), tf.constant_initializer(0.1)  # config of layers
 
             self.q_eval = build_layers(self.s, c_names, n_l1, w_initializer, b_initializer)
 
-        with tf.variable_scope('loss'):
-            self.loss = tf.reduce_mean(tf.squared_difference(self.q_target, self.q_eval))
-        with tf.variable_scope('train'):
-            self._train_op = tf.train.RMSPropOptimizer(self.lr).minimize(self.loss)
+        with tf.compat.v1.variable_scope('loss'):
+            self.loss = tf.reduce_mean(tf.compat.v1.squared_difference(self.q_target, self.q_eval))
+        with tf.compat.v1.variable_scope('train'):
+            self._train_op = tf.compat.v1.train.RMSPropOptimizer(self.lr).minimize(self.loss)
 
         # ------------------ build target_net ------------------
-        self.s_ = tf.placeholder(tf.float32, [None, self.n_features], name='s_')    # input
-        with tf.variable_scope('target_net'):
-            c_names = ['target_net_params', tf.GraphKeys.GLOBAL_VARIABLES]
+        self.s_ = tf.compat.v1.placeholder(tf.float32, [None, self.n_features], name='s_')    # input
+        with tf.compat.v1.variable_scope('target_net'):
+            c_names = ['target_net_params', tf.compat.v1.GraphKeys.GLOBAL_VARIABLES]
 
             self.q_next = build_layers(self.s_, c_names, n_l1, w_initializer, b_initializer)
 
@@ -136,7 +138,7 @@ class DuelingDQN:
         sample_index = np.random.choice(self.memory_size, size=self.batch_size)
         batch_memory = self.memory[sample_index, :]
 
-        q_next = self.sess.run(self.q_next, feed_dict={self.s_: batch_memory[:, -self.n_features:]}) # next observation
+        q_next = self.sess.run(self.q_next, feed_dict={self.s_: batch_memory[:, -self.n_features:]})  # next observation
         q_eval = self.sess.run(self.q_eval, {self.s: batch_memory[:, :self.n_features]})
 
         q_target = q_eval.copy()
@@ -154,8 +156,3 @@ class DuelingDQN:
 
         self.epsilon = self.epsilon + self.epsilon_increment if self.epsilon < self.epsilon_max else self.epsilon_max
         self.learn_step_counter += 1
-
-
-
-
-

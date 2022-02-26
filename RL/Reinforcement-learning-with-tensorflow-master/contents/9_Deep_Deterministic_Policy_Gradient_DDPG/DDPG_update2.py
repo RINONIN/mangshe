@@ -20,7 +20,7 @@ import gym
 import time
 
 
-#####################  hyper parameters  ####################
+# hyper parameters
 
 MAX_EPISODES = 200
 MAX_EP_STEPS = 200
@@ -33,27 +33,27 @@ BATCH_SIZE = 32
 
 RENDER = False
 ENV_NAME = 'Pendulum-v0'
+tf.compat.v1.disable_eager_execution()
 
-
-###############################  DDPG  ####################################
+# DDPG
 
 
 class DDPG(object):
     def __init__(self, a_dim, s_dim, a_bound,):
         self.memory = np.zeros((MEMORY_CAPACITY, s_dim * 2 + a_dim + 1), dtype=np.float32)
         self.pointer = 0
-        self.sess = tf.Session()
+        self.sess = tf.compat.v1.Session()
 
         self.a_dim, self.s_dim, self.a_bound = a_dim, s_dim, a_bound,
-        self.S = tf.placeholder(tf.float32, [None, s_dim], 's')
-        self.S_ = tf.placeholder(tf.float32, [None, s_dim], 's_')
-        self.R = tf.placeholder(tf.float32, [None, 1], 'r')
+        self.S = tf.compat.v1.placeholder(tf.compat.v1.float32, [None, s_dim], 's')
+        self.S_ = tf.compat.v1.placeholder(tf.compat.v1.float32, [None, s_dim], 's_')
+        self.R = tf.compat.v1.placeholder(tf.compat.v1.float32, [None, 1], 'r')
 
         self.a = self._build_a(self.S,)
         q = self._build_c(self.S, self.a, )
-        a_params = tf.get_collection(tf.GraphKeys.TRAINABLE_VARIABLES, scope='Actor')
-        c_params = tf.get_collection(tf.GraphKeys.TRAINABLE_VARIABLES, scope='Critic')
-        ema = tf.train.ExponentialMovingAverage(decay=1 - TAU)          # soft replacement
+        a_params = tf.compat.v1.get_collection(tf.compat.v1.GraphKeys.TRAINABLE_VARIABLES, scope='Actor')
+        c_params = tf.compat.v1.get_collection(tf.compat.v1.GraphKeys.TRAINABLE_VARIABLES, scope='Critic')
+        ema = tf.compat.v1.train.ExponentialMovingAverage(decay=1 - TAU)          # soft replacement
 
         def ema_getter(getter, name, *args, **kwargs):
             return ema.average(getter(name, *args, **kwargs))
@@ -62,15 +62,15 @@ class DDPG(object):
         a_ = self._build_a(self.S_, reuse=True, custom_getter=ema_getter)   # replaced target parameters
         q_ = self._build_c(self.S_, a_, reuse=True, custom_getter=ema_getter)
 
-        a_loss = - tf.reduce_mean(q)  # maximize the q
-        self.atrain = tf.train.AdamOptimizer(LR_A).minimize(a_loss, var_list=a_params)
+        a_loss = - tf.compat.v1.reduce_mean(q)  # maximize the q
+        self.atrain = tf.compat.v1.train.AdamOptimizer(LR_A).minimize(a_loss, var_list=a_params)
 
-        with tf.control_dependencies(target_update):    # soft replacement happened at here
+        with tf.compat.v1.control_dependencies(target_update):    # soft replacement happened at here
             q_target = self.R + GAMMA * q_
-            td_error = tf.losses.mean_squared_error(labels=q_target, predictions=q)
-            self.ctrain = tf.train.AdamOptimizer(LR_C).minimize(td_error, var_list=c_params)
+            td_error = tf.compat.v1.losses.mean_squared_error(labels=q_target, predictions=q)
+            self.ctrain = tf.compat.v1.train.AdamOptimizer(LR_C).minimize(td_error, var_list=c_params)
 
-        self.sess.run(tf.global_variables_initializer())
+        self.sess.run(tf.compat.v1.global_variables_initializer())
 
     def choose_action(self, s):
         return self.sess.run(self.a, {self.S: s[np.newaxis, :]})[0]
@@ -94,20 +94,20 @@ class DDPG(object):
 
     def _build_a(self, s, reuse=None, custom_getter=None):
         trainable = True if reuse is None else False
-        with tf.variable_scope('Actor', reuse=reuse, custom_getter=custom_getter):
-            net = tf.layers.dense(s, 30, activation=tf.nn.relu, name='l1', trainable=trainable)
-            a = tf.layers.dense(net, self.a_dim, activation=tf.nn.tanh, name='a', trainable=trainable)
-            return tf.multiply(a, self.a_bound, name='scaled_a')
+        with tf.compat.v1.variable_scope('Actor', reuse=reuse, custom_getter=custom_getter):
+            net = tf.compat.v1.layers.dense(s, 30, activation=tf.compat.v1.nn.relu, name='l1', trainable=trainable)
+            a = tf.compat.v1.layers.dense(net, self.a_dim, activation=tf.compat.v1.nn.tanh, name='a', trainable=trainable)
+            return tf.compat.v1.multiply(a, self.a_bound, name='scaled_a')
 
     def _build_c(self, s, a, reuse=None, custom_getter=None):
         trainable = True if reuse is None else False
-        with tf.variable_scope('Critic', reuse=reuse, custom_getter=custom_getter):
+        with tf.compat.v1.variable_scope('Critic', reuse=reuse, custom_getter=custom_getter):
             n_l1 = 30
-            w1_s = tf.get_variable('w1_s', [self.s_dim, n_l1], trainable=trainable)
-            w1_a = tf.get_variable('w1_a', [self.a_dim, n_l1], trainable=trainable)
-            b1 = tf.get_variable('b1', [1, n_l1], trainable=trainable)
-            net = tf.nn.relu(tf.matmul(s, w1_s) + tf.matmul(a, w1_a) + b1)
-            return tf.layers.dense(net, 1, trainable=trainable)  # Q(s,a)
+            w1_s = tf.compat.v1.get_variable('w1_s', [self.s_dim, n_l1], trainable=trainable)
+            w1_a = tf.compat.v1.get_variable('w1_a', [self.a_dim, n_l1], trainable=trainable)
+            b1 = tf.compat.v1.get_variable('b1', [1, n_l1], trainable=trainable)
+            net = tf.compat.v1.nn.relu(tf.compat.v1.matmul(s, w1_s) + tf.compat.v1.matmul(a, w1_a) + b1)
+            return tf.compat.v1.layers.dense(net, 1, trainable=trainable)  # Q(s,a)
 
 
 ###############################  training  ####################################

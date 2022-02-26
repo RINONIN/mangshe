@@ -13,10 +13,12 @@ gym: 0.8.0
 
 import numpy as np
 import tensorflow as tf
+tf.compat.v1.disable_eager_execution()
+
 
 # reproducible
 np.random.seed(1)
-tf.set_random_seed(1)
+tf.compat.v1.set_random_seed(1)
 
 
 class PolicyGradient:
@@ -33,59 +35,61 @@ class PolicyGradient:
         self.lr = learning_rate
         self.gamma = reward_decay
 
-        self.ep_obs, self.ep_as, self.ep_rs = [], [], []
+        self.ep_obs, self.ep_as, self.ep_rs = [], [], []   # 这是我们存储 回合信息的 list
 
-        self._build_net()
+        self._build_net()   # 建立 policy 神经网络
 
-        self.sess = tf.Session()
+        self.sess = tf.compat.v1.Session()
 
-        if output_graph:
+        if output_graph:  # 是否输出 tensorboard 文件
             # $ tensorboard --logdir=logs
             # http://0.0.0.0:6006/
             # tf.train.SummaryWriter soon be deprecated, use following
-            tf.summary.FileWriter("logs/", self.sess.graph)
+            tf.compat.v1.summary.FileWriter("logs/", self.sess.graph)
 
-        self.sess.run(tf.global_variables_initializer())
+        self.sess.run(tf.compat.v1.global_variables_initializer())
 
     def _build_net(self):
         with tf.name_scope('inputs'):
-            self.tf_obs = tf.placeholder(tf.float32, [None, self.n_features], name="observations")
-            self.tf_acts = tf.placeholder(tf.int32, [None, ], name="actions_num")
-            self.tf_vt = tf.placeholder(tf.float32, [None, ], name="actions_value")
+            self.tf_obs = tf.compat.v1.placeholder(tf.float32, [None, self.n_features], name="observations")
+            # 接收 observation
+            self.tf_acts = tf.compat.v1.placeholder(tf.int32, [None, ], name="actions_num")   # 接收我们在这个回合中选过的 actions
+            self.tf_vt = tf.compat.v1.placeholder(tf.float32, [None, ], name="actions_value")  # 接收每个 state-action
+            # 所对应的 value (通过 reward 计算)
         # fc1
-        layer = tf.layers.dense(
+        layer = tf.compat.v1.layers.dense(
             inputs=self.tf_obs,
-            units=10,
-            activation=tf.nn.tanh,  # tanh activation
+            units=10,   # 输出个数
+            activation=tf.nn.tanh,  # 激励函数
             kernel_initializer=tf.random_normal_initializer(mean=0, stddev=0.3),
             bias_initializer=tf.constant_initializer(0.1),
             name='fc1'
         )
         # fc2
-        all_act = tf.layers.dense(
+        all_act = tf.compat.v1.layers.dense(
             inputs=layer,
-            units=self.n_actions,
-            activation=None,
+            units=self.n_actions,   # 输出个数
+            activation=None,  # 之后再加 Softmax
             kernel_initializer=tf.random_normal_initializer(mean=0, stddev=0.3),
             bias_initializer=tf.constant_initializer(0.1),
             name='fc2'
         )
 
-        self.all_act_prob = tf.nn.softmax(all_act, name='act_prob')  # use softmax to convert to probability
+        self.all_act_prob = tf.nn.softmax(all_act, name='act_prob')  # 激励函数 softmax 出概率
 
         with tf.name_scope('loss'):
-            # to maximize total reward (log_p * R) is to minimize -(log_p * R), and the tf only have minimize(loss)
-            neg_log_prob = tf.nn.sparse_softmax_cross_entropy_with_logits(logits=all_act, labels=self.tf_acts)   # this is negative log of chosen action
-            # or in this way:
+            # 最大化 总体 reward (log_p * R) 就是在最小化 -(log_p * R), 而 tf 的功能里只有最小化 loss
+            neg_log_prob = tf.nn.sparse_softmax_cross_entropy_with_logits(logits=all_act, labels=self.tf_acts)   # 所选 action 的概率 -log 值
+            # 下面的方式是一样的:
             # neg_log_prob = tf.reduce_sum(-tf.log(self.all_act_prob)*tf.one_hot(self.tf_acts, self.n_actions), axis=1)
-            loss = tf.reduce_mean(neg_log_prob * self.tf_vt)  # reward guided loss
+            loss = tf.reduce_mean(neg_log_prob * self.tf_vt)  # (vt = 本reward + 衰减的未来reward) 引导参数的梯度下降
 
         with tf.name_scope('train'):
-            self.train_op = tf.train.AdamOptimizer(self.lr).minimize(loss)
+            self.train_op = tf.compat.v1.train.AdamOptimizer(self.lr).minimize(loss)
 
     def choose_action(self, observation):
-        prob_weights = self.sess.run(self.all_act_prob, feed_dict={self.tf_obs: observation[np.newaxis, :]})
-        action = np.random.choice(range(prob_weights.shape[1]), p=prob_weights.ravel())  # select action w.r.t the actions prob
+        prob_weights = self.sess.run(self.all_act_prob, feed_dict={self.tf_obs: observation[np.newaxis, :]})  # 所有 action 的概率
+        action = np.random.choice(range(prob_weights.shape[1]), p=prob_weights.ravel())   # 根据概率来选 action
         return action
 
     def store_transition(self, s, a, r):
@@ -94,8 +98,8 @@ class PolicyGradient:
         self.ep_rs.append(r)
 
     def learn(self):
-        # discount and normalize episode reward
-        discounted_ep_rs_norm = self._discount_and_norm_rewards()
+        # 衰减, 并标准化这回合的 reward
+        discounted_ep_rs_norm = self._discount_and_norm_rewards()   # 功能再面
 
         # train on episode
         self.sess.run(self.train_op, feed_dict={
@@ -104,8 +108,8 @@ class PolicyGradient:
              self.tf_vt: discounted_ep_rs_norm,  # shape=[None, ]
         })
 
-        self.ep_obs, self.ep_as, self.ep_rs = [], [], []    # empty episode data
-        return discounted_ep_rs_norm
+        self.ep_obs, self.ep_as, self.ep_rs = [], [], []    # 清空回合 data
+        return discounted_ep_rs_norm # 返回这一回合的 state-action value
 
     def _discount_and_norm_rewards(self):
         # discount episode rewards
@@ -119,6 +123,3 @@ class PolicyGradient:
         discounted_ep_rs -= np.mean(discounted_ep_rs)
         discounted_ep_rs /= np.std(discounted_ep_rs)
         return discounted_ep_rs
-
-
-

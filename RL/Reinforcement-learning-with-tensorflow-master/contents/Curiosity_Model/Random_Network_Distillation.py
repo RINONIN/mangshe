@@ -4,7 +4,7 @@ import numpy as np
 import tensorflow as tf
 import gym
 import matplotlib.pyplot as plt
-
+tf.compat.v1.disable_eager_execution()
 
 class CuriosityNet:
     def __init__(

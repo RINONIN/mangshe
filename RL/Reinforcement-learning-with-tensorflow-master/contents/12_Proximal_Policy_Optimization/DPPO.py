@@ -18,6 +18,7 @@ import tensorflow as tf
 import numpy as np
 import matplotlib.pyplot as plt
 import gym, threading, queue
+tf.compat.v1.disable_eager_execution()
 
 EP_MAX = 1000
 EP_LEN = 200
@@ -34,35 +35,35 @@ S_DIM, A_DIM = 3, 1         # state and action dimension
 
 class PPO(object):
     def __init__(self):
-        self.sess = tf.Session()
-        self.tfs = tf.placeholder(tf.float32, [None, S_DIM], 'state')
+        self.sess = tf.compat.v1.Session()
+        self.tfs = tf.compat.v1.placeholder(tf.compat.v1.float32, [None, S_DIM], 'state')
 
         # critic
-        l1 = tf.layers.dense(self.tfs, 100, tf.nn.relu)
-        self.v = tf.layers.dense(l1, 1)
-        self.tfdc_r = tf.placeholder(tf.float32, [None, 1], 'discounted_r')
+        l1 = tf.compat.v1.layers.dense(self.tfs, 100, tf.compat.v1.nn.relu)
+        self.v = tf.compat.v1.layers.dense(l1, 1)
+        self.tfdc_r = tf.compat.v1.placeholder(tf.compat.v1.float32, [None, 1], 'discounted_r')
         self.advantage = self.tfdc_r - self.v
-        self.closs = tf.reduce_mean(tf.square(self.advantage))
-        self.ctrain_op = tf.train.AdamOptimizer(C_LR).minimize(self.closs)
+        self.closs = tf.compat.v1.reduce_mean(tf.compat.v1.square(self.advantage))
+        self.ctrain_op = tf.compat.v1.train.AdamOptimizer(C_LR).minimize(self.closs)
 
         # actor
         pi, pi_params = self._build_anet('pi', trainable=True)
         oldpi, oldpi_params = self._build_anet('oldpi', trainable=False)
-        self.sample_op = tf.squeeze(pi.sample(1), axis=0)  # operation of choosing action
+        self.sample_op = tf.compat.v1.squeeze(pi.sample(1), axis=0)  # operation of choosing action
         self.update_oldpi_op = [oldp.assign(p) for p, oldp in zip(pi_params, oldpi_params)]
 
-        self.tfa = tf.placeholder(tf.float32, [None, A_DIM], 'action')
-        self.tfadv = tf.placeholder(tf.float32, [None, 1], 'advantage')
-        # ratio = tf.exp(pi.log_prob(self.tfa) - oldpi.log_prob(self.tfa))
+        self.tfa = tf.compat.v1.placeholder(tf.compat.v1.float32, [None, A_DIM], 'action')
+        self.tfadv = tf.compat.v1.placeholder(tf.compat.v1.float32, [None, 1], 'advantage')
+        # ratio = tf.compat.v1.exp(pi.log_prob(self.tfa) - oldpi.log_prob(self.tfa))
         ratio = pi.prob(self.tfa) / (oldpi.prob(self.tfa) + 1e-5)
         surr = ratio * self.tfadv                       # surrogate loss
 
-        self.aloss = -tf.reduce_mean(tf.minimum(        # clipped surrogate objective
+        self.aloss = -tf.compat.v1.reduce_mean(tf.compat.v1.minimum(        # clipped surrogate objective
             surr,
-            tf.clip_by_value(ratio, 1. - EPSILON, 1. + EPSILON) * self.tfadv))
+            tf.compat.v1.clip_by_value(ratio, 1. - EPSILON, 1. + EPSILON) * self.tfadv))
 
-        self.atrain_op = tf.train.AdamOptimizer(A_LR).minimize(self.aloss)
-        self.sess.run(tf.global_variables_initializer())
+        self.atrain_op = tf.compat.v1.train.AdamOptimizer(A_LR).minimize(self.aloss)
+        self.sess.run(tf.compat.v1.global_variables_initializer())
 
     def update(self):
         global GLOBAL_UPDATE_COUNTER
@@ -82,12 +83,12 @@ class PPO(object):
                 ROLLING_EVENT.set()         # set roll-out available
 
     def _build_anet(self, name, trainable):
-        with tf.variable_scope(name):
-            l1 = tf.layers.dense(self.tfs, 200, tf.nn.relu, trainable=trainable)
-            mu = 2 * tf.layers.dense(l1, A_DIM, tf.nn.tanh, trainable=trainable)
-            sigma = tf.layers.dense(l1, A_DIM, tf.nn.softplus, trainable=trainable)
-            norm_dist = tf.distributions.Normal(loc=mu, scale=sigma)
-        params = tf.get_collection(tf.GraphKeys.GLOBAL_VARIABLES, scope=name)
+        with tf.compat.v1.variable_scope(name):
+            l1 = tf.compat.v1.layers.dense(self.tfs, 200, tf.compat.v1.nn.relu, trainable=trainable)
+            mu = 2 * tf.compat.v1.layers.dense(l1, A_DIM, tf.compat.v1.nn.tanh, trainable=trainable)
+            sigma = tf.compat.v1.layers.dense(l1, A_DIM, tf.compat.v1.nn.softplus, trainable=trainable)
+            norm_dist = tf.compat.v1.distributions.Normal(loc=mu, scale=sigma)
+        params = tf.compat.v1.get_collection(tf.compat.v1.GraphKeys.GLOBAL_VARIABLES, scope=name)
         return norm_dist, params
 
     def choose_action(self, s):
@@ -160,7 +161,7 @@ if __name__ == '__main__':
     
     GLOBAL_UPDATE_COUNTER, GLOBAL_EP = 0, 0
     GLOBAL_RUNNING_R = []
-    COORD = tf.train.Coordinator()
+    COORD = tf.compat.v1.train.Coordinator()
     QUEUE = queue.Queue()           # workers putting data in this queue
     threads = []
     for worker in workers:          # worker threads

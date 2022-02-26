@@ -12,7 +12,7 @@ import tensorflow as tf
 import numpy as np
 import gym, time
 import matplotlib.pyplot as plt
-
+tf.compat.v1.disable_eager_execution()
 
 UPDATE_GLOBAL_ITER = 10
 GAMMA = 0.9
@@ -30,54 +30,54 @@ class ACNet(object):
 
     def __init__(self, scope, opt_a=None, opt_c=None, global_net=None):
         if scope == 'global_net':  # get global network
-            with tf.variable_scope(scope):
-                self.s = tf.placeholder(tf.float32, [None, N_S], 'S')
+            with tf.compat.v1.variable_scope(scope):
+                self.s = tf.compat.v1.placeholder(tf.compat.v1.float32, [None, N_S], 'S')
                 self.a_params, self.c_params = self._build_net(scope)[-2:]
         else:
-            with tf.variable_scope(scope):
-                self.s = tf.placeholder(tf.float32, [None, N_S], 'S')
-                self.a_his = tf.placeholder(tf.int32, [None, ], 'A')
-                self.v_target = tf.placeholder(tf.float32, [None, 1], 'Vtarget')
+            with tf.compat.v1.variable_scope(scope):
+                self.s = tf.compat.v1.placeholder(tf.compat.v1.float32, [None, N_S], 'S')
+                self.a_his = tf.compat.v1.placeholder(tf.compat.v1.int32, [None, ], 'A')
+                self.v_target = tf.compat.v1.placeholder(tf.compat.v1.float32, [None, 1], 'Vtarget')
 
                 self.a_prob, self.v, self.a_params, self.c_params = self._build_net(scope)
 
-                td = tf.subtract(self.v_target, self.v, name='TD_error')
-                with tf.name_scope('c_loss'):
-                    self.c_loss = tf.reduce_mean(tf.square(td))
+                td = tf.compat.v1.subtract(self.v_target, self.v, name='TD_error')
+                with tf.compat.v1.name_scope('c_loss'):
+                    self.c_loss = tf.compat.v1.reduce_mean(tf.compat.v1.square(td))
 
-                with tf.name_scope('a_loss'):
-                    log_prob = tf.reduce_sum(
-                        tf.log(self.a_prob) * tf.one_hot(self.a_his, N_A, dtype=tf.float32),
+                with tf.compat.v1.name_scope('a_loss'):
+                    log_prob = tf.compat.v1.reduce_sum(
+                        tf.compat.v1.log(self.a_prob) * tf.compat.v1.one_hot(self.a_his, N_A, dtype=tf.compat.v1.float32),
                         axis=1, keep_dims=True)
-                    exp_v = log_prob * tf.stop_gradient(td)
-                    entropy = -tf.reduce_sum(self.a_prob * tf.log(self.a_prob + 1e-5),
+                    exp_v = log_prob * tf.compat.v1.stop_gradient(td)
+                    entropy = -tf.compat.v1.reduce_sum(self.a_prob * tf.compat.v1.log(self.a_prob + 1e-5),
                                              axis=1, keep_dims=True)  # encourage exploration
                     self.exp_v = ENTROPY_BETA * entropy + exp_v
-                    self.a_loss = tf.reduce_mean(-self.exp_v)
+                    self.a_loss = tf.compat.v1.reduce_mean(-self.exp_v)
 
-                with tf.name_scope('local_grad'):
-                    self.a_grads = tf.gradients(self.a_loss, self.a_params)
-                    self.c_grads = tf.gradients(self.c_loss, self.c_params)
+                with tf.compat.v1.name_scope('local_grad'):
+                    self.a_grads = tf.compat.v1.gradients(self.a_loss, self.a_params)
+                    self.c_grads = tf.compat.v1.gradients(self.c_loss, self.c_params)
 
-            self.global_step = tf.train.get_or_create_global_step()
-            with tf.name_scope('sync'):
-                with tf.name_scope('pull'):
+            self.global_step = tf.compat.v1.train.get_or_create_global_step()
+            with tf.compat.v1.name_scope('sync'):
+                with tf.compat.v1.name_scope('pull'):
                     self.pull_a_params_op = [l_p.assign(g_p) for l_p, g_p in zip(self.a_params, global_net.a_params)]
                     self.pull_c_params_op = [l_p.assign(g_p) for l_p, g_p in zip(self.c_params, global_net.c_params)]
-                with tf.name_scope('push'):
+                with tf.compat.v1.name_scope('push'):
                     self.update_a_op = opt_a.apply_gradients(zip(self.a_grads, global_net.a_params), global_step=self.global_step)
                     self.update_c_op = opt_c.apply_gradients(zip(self.c_grads, global_net.c_params))
 
     def _build_net(self, scope):
-        w_init = tf.random_normal_initializer(0., .1)
-        with tf.variable_scope('actor'):
-            l_a = tf.layers.dense(self.s, 200, tf.nn.relu6, kernel_initializer=w_init, name='la')
-            a_prob = tf.layers.dense(l_a, N_A, tf.nn.softmax, kernel_initializer=w_init, name='ap')
-        with tf.variable_scope('critic'):
-            l_c = tf.layers.dense(self.s, 100, tf.nn.relu6, kernel_initializer=w_init, name='lc')
-            v = tf.layers.dense(l_c, 1, kernel_initializer=w_init, name='v')  # state value
-        a_params = tf.get_collection(tf.GraphKeys.TRAINABLE_VARIABLES, scope=scope + '/actor')
-        c_params = tf.get_collection(tf.GraphKeys.TRAINABLE_VARIABLES, scope=scope + '/critic')
+        w_init = tf.compat.v1.random_normal_initializer(0., .1)
+        with tf.compat.v1.variable_scope('actor'):
+            l_a = tf.compat.v1.layers.dense(self.s, 200, tf.compat.v1.nn.relu6, kernel_initializer=w_init, name='la')
+            a_prob = tf.compat.v1.layers.dense(l_a, N_A, tf.compat.v1.nn.softmax, kernel_initializer=w_init, name='ap')
+        with tf.compat.v1.variable_scope('critic'):
+            l_c = tf.compat.v1.layers.dense(self.s, 100, tf.compat.v1.nn.relu6, kernel_initializer=w_init, name='lc')
+            v = tf.compat.v1.layers.dense(l_c, 1, kernel_initializer=w_init, name='v')  # state value
+        a_params = tf.compat.v1.get_collection(tf.compat.v1.GraphKeys.TRAINABLE_VARIABLES, scope=scope + '/actor')
+        c_params = tf.compat.v1.get_collection(tf.compat.v1.GraphKeys.TRAINABLE_VARIABLES, scope=scope + '/critic')
         return a_prob, v, a_params, c_params
 
     def choose_action(self, s):  # run by a local
@@ -95,11 +95,11 @@ class ACNet(object):
 
 def work(job_name, task_index, global_ep, lock, r_queue, global_running_r):
     # set work's ip:port
-    cluster = tf.train.ClusterSpec({
+    cluster = tf.compat.v1.train.ClusterSpec({
         "ps": ['localhost:2220', 'localhost:2221',],
         "worker": ['localhost:2222', 'localhost:2223', 'localhost:2224', 'localhost:2225',]
     })
-    server = tf.train.Server(cluster, job_name=job_name, task_index=task_index)
+    server = tf.compat.v1.train.Server(cluster, job_name=job_name, task_index=task_index)
     if job_name == 'ps':
         print('Start Parameter Sever: ', task_index)
         server.join()
@@ -107,17 +107,17 @@ def work(job_name, task_index, global_ep, lock, r_queue, global_running_r):
         t1 = time.time()
         env = gym.make('CartPole-v0').unwrapped
         print('Start Worker: ', task_index)
-        with tf.device(tf.train.replica_device_setter(
+        with tf.compat.v1.device(tf.compat.v1.train.replica_device_setter(
                 worker_device="/job:worker/task:%d" % task_index,
                 cluster=cluster)):
-            opt_a = tf.train.RMSPropOptimizer(LR_A, name='opt_a')
-            opt_c = tf.train.RMSPropOptimizer(LR_C, name='opt_c')
+            opt_a = tf.compat.v1.train.RMSPropOptimizer(LR_A, name='opt_a')
+            opt_c = tf.compat.v1.train.RMSPropOptimizer(LR_C, name='opt_c')
             global_net = ACNet('global_net')
 
         local_net = ACNet('local_ac%d' % task_index, opt_a, opt_c, global_net)
         # set training steps
-        hooks = [tf.train.StopAtStepHook(last_step=100000)]
-        with tf.train.MonitoredTrainingSession(master=server.target,
+        hooks = [tf.compat.v1.train.StopAtStepHook(last_step=100000)]
+        with tf.compat.v1.train.MonitoredTrainingSession(master=server.target,
                                                is_chief=True,
                                                hooks=hooks,) as sess:
             print('Start Worker Session: ', task_index)
