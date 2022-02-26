@@ -36,7 +36,7 @@ BATCH_SIZE = 32
 
 RENDER = False
 OUTPUT_GRAPH = True
-ENV_NAME = 'Pendulum-v0'
+ENV_NAME = 'Pendulum-v1'
 
 
 # Actor
@@ -58,10 +58,8 @@ class Actor(object):
             # input s_, output a, get a_ for critic
             self.a_ = self._build_net(S_, scope='target_net', trainable=False)
 
-        self.e_params = tf.compat.v1.compat.v1.get_collection(tf.compat.v1.compat.v1.GraphKeys.GLOBAL_VARIABLES,
-                                                              scope='Actor/eval_net')
-        self.t_params = tf.compat.v1.compat.v1.get_collection(tf.compat.v1.compat.v1.GraphKeys.GLOBAL_VARIABLES,
-                                                              scope='Actor/target_net')
+        self.e_params = tf.compat.v1.compat.v1.get_collection(tf.compat.v1.compat.v1.GraphKeys.GLOBAL_VARIABLES, scope='Actor/eval_net')
+        self.t_params = tf.compat.v1.compat.v1.get_collection(tf.compat.v1.compat.v1.GraphKeys.GLOBAL_VARIABLES, scope='Actor/target_net')
 
         if self.replacement['name'] == 'hard':
             self.t_replace_counter = 0
@@ -137,10 +135,8 @@ class Critic(object):
             self.q_ = self._build_net(S_, a_, 'target_net',
                                       trainable=False)  # target_q is based on a_ from Actor's target_net
 
-            self.e_params = tf.compat.v1.compat.v1.get_collection(tf.compat.v1.compat.v1.GraphKeys.GLOBAL_VARIABLES,
-                                                                  scope='Critic/eval_net')
-            self.t_params = tf.compat.v1.compat.v1.get_collection(tf.compat.v1.compat.v1.GraphKeys.GLOBAL_VARIABLES,
-                                                                  scope='Critic/target_net')
+            self.e_params = tf.compat.v1.compat.v1.get_collection(tf.compat.v1.compat.v1.GraphKeys.GLOBAL_VARIABLES, scope='Critic/eval_net')
+            self.t_params = tf.compat.v1.compat.v1.get_collection(tf.compat.v1.compat.v1.GraphKeys.GLOBAL_VARIABLES, scope='Critic/target_net')
 
         with tf.compat.v1.compat.v1.variable_scope('target_q'):  # self.q_ 根据 Actor 的 target_net 来的
             self.target_q = R + self.gamma * self.q_

@@ -15,7 +15,6 @@ class RL(object):
         self.lr = learning_rate
         self.gamma = reward_decay
         self.epsilon = e_greedy
-
         self.q_table = pd.DataFrame(columns=self.actions, dtype=np.float64)
 
     def check_state_exist(self, state):
@@ -55,7 +54,7 @@ class QLearningTable(RL):
         self.check_state_exist(s_)
         q_predict = self.q_table.loc[s, a]
         if s_ != 'terminal':
-            q_target = r + self.gamma * self.q_table.loc[s_, :].max()  # next state is not terminal
+            q_target = r + self.gamma * self.q_table.loc[s_, :].max()  # next state is not terminal 直接获取最大奖励
         else:
             q_target = r  # next state is terminal
         self.q_table.loc[s, a] += self.lr * (q_target - q_predict)  # update
@@ -71,7 +70,7 @@ class SarsaTable(RL):
         self.check_state_exist(s_)
         q_predict = self.q_table.loc[s, a]
         if s_ != 'terminal':
-            q_target = r + self.gamma * self.q_table.loc[s_, a_]  # next state is not terminal
+            q_target = r + self.gamma * self.q_table.loc[s_, a_]  # next state is not terminal 获取下一步的状态和动作所得到的奖励
         else:
             q_target = r  # next state is terminal
         self.q_table.loc[s, a] += self.lr * (q_target - q_predict)  # update

@@ -16,48 +16,49 @@ np.random.seed(2)  # reproducible
 # 2.如果不设置这个值，则系统根据时间来自己选择这个值，此时每次生成的随机数因时间差异而不同。
 # 3.设置的seed()值仅一次有效
 
-N_STATES = 6   # 一维世界的长度
-ACTIONS = ['left', 'right']     # 可选择的动作
-EPSILON = 0.8   # 贪婪率，80%选择最优
-ALPHA = 0.1     # 学习率
-GAMMA = 0.9    # 奖励衰减率
-MAX_EPISODES = 10   # 最大代数
-FRESH_TIME = 0.05    # 执行一个动作的时长
+N_STATES = 6  # 一维世界的长度
+ACTIONS = ['left', 'right']  # 可选择的动作
+EPSILON = 0.8  # 贪婪率，80%选择最优
+ALPHA = 0.1  # 学习率
+GAMMA = 0.9  # 奖励衰减率
+MAX_EPISODES = 10  # 最大代数
+FRESH_TIME = 0.5  # 执行一个动作的时长
 
 
 def build_q_table(n_states, actions):
     table = pd.DataFrame(
-        np.zeros((n_states, len(actions))),     # q_table 初始化为0 , 建立一个 6*2 的矩阵
-        columns=actions,    # 动作名称
+        np.zeros((n_states, len(actions))),  # q_table 初始化为0 , 建立一个 6*2 的矩阵
+        columns=actions,  # 动作名称
+        # index=['1', '2', '3', '4', '5', '6']
     )
-    # print(table)    # 显示 q_table
+    # print(table)  # 显示 q_table
     return table
 
 
 def choose_action(state, q_table):
     # 动作选择
-    state_actions = q_table.iloc[state, :]  # 提取指定行列的数据
-    if (np.random.uniform() > EPSILON) or ((state_actions == 0).all()):  # 执行非贪婪准则，随机选择动作
-        action_name = np.random.choice(ACTIONS)
-    else:   # 执行贪婪准则
+    state_actions = q_table.iloc[state, :]  # 提取指定行列的数据，取所选中的state行所有列的数据
+    if (np.random.uniform() > EPSILON) or ((state_actions == 0).all()):  # 随机数大于epsilon，执行非贪婪准则，随机选择动作
+        action_name = np.random.choice(ACTIONS)  # 随机选择一个动作
+    else:  # 执行贪婪准则
         action_name = state_actions.idxmax()  # 返回取到最大值的索引 默认是列（其中括号中的axis=0是列，axis=1是行）
         # replace argmax to idxmax as argmax means a different function in newer version of pandas
-    return action_name
+    return action_name  # 返回动作名称
 
 
 def get_env_feedback(S, A):
     # 环境反馈
-    if A == 'right':    # 向右移动
-        if S == N_STATES - 2:   # terminate
+    if A == 'right':  # 向右移动
+        if S == N_STATES - 2:  # terminate 向右移动至总体长度-2时，则到达终点
             S_ = 'terminal'
-            R = 1
+            R = 1  # 奖励
         else:
             S_ = S + 1
             R = 0
-    else:   # move left
+    else:  # move left
         R = 0
         if S == 0:
-            S_ = S  # reach the wall
+            S_ = S  # reach the wall 向左移动至起点时，则到达终点
         else:
             S_ = S - 1
     return S_, R
@@ -65,14 +66,14 @@ def get_env_feedback(S, A):
 
 def update_env(S, episode, step_counter):
     # 环境更新
-    env_list = ['-']*(N_STATES-1) + ['T']   # '-----T' our environment
+    env_list = ['-'] * (N_STATES - 1) + ['T']  # '-----T' our environment
     if S == 'terminal':
-        interaction = 'Episode %s: total_steps = %s' % (episode+1, step_counter)
-        print('\r{}'.format(interaction), end='')
-        time.sleep(2)
+        interaction = 'Episode %s: total_steps = %s' % (episode + 1, step_counter)
+        print('\r{}'.format(interaction), end='')  # 打印当前回合数以及所用步数
+        time.sleep(2)  # 推迟执行2秒
         print('\r                                ', end='')
     else:
-        env_list[S] = 'o'
+        env_list[S] = 'λ'
         interaction = ''.join(env_list)
         print('\r{}'.format(interaction), end='')
         time.sleep(FRESH_TIME)
@@ -88,19 +89,19 @@ def rl():
         update_env(S, episode, step_counter)
         while not is_terminated:
 
-            A = choose_action(S, q_table)
-            S_, R = get_env_feedback(S, A)  # 采取行动 & 获取下一步的状态和奖励
-            q_predict = q_table.loc[S, A]
+            A = choose_action(S, q_table)  # 采取行动
+            S_, R = get_env_feedback(S, A)  # 获取下一步的状态和奖励
+            q_predict = q_table.loc[S, A]  # 从q表获取预测值
             if S_ != 'terminal':
-                q_target = R + GAMMA * q_table.iloc[S_, :].max()   # 下一个状态不是终点
+                q_target = R + GAMMA * q_table.iloc[S_, :].max()  # 下一个状态不是终点，选择最大的奖励值
             else:
-                q_target = R     # 下一个状态是终点
-                is_terminated = True    # 终止该回合
+                q_target = R  # 下一个状态是终点
+                is_terminated = True  # 终止该回合
 
-            q_table.loc[S, A] += ALPHA * (q_target - q_predict)  # 更新
+            q_table.loc[S, A] += ALPHA * (q_target - q_predict)  # 更新q表
             S = S_  # 移动到下一状态
 
-            update_env(S, episode, step_counter+1)
+            update_env(S, episode, step_counter + 1)  # 更新环境
             step_counter += 1
     return q_table
 

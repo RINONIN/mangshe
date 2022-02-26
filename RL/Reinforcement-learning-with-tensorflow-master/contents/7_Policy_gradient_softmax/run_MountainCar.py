@@ -14,7 +14,7 @@ import gym
 from RL_brain import PolicyGradient
 import matplotlib.pyplot as plt
 
-DISPLAY_REWARD_THRESHOLD = -2000  # renders environment if total episode reward is greater then this threshold
+DISPLAY_REWARD_THRESHOLD = -2000  # 当回合总奖励值大于-2000时，可以显示模拟窗口
 # episode: 154   reward: -10667
 # episode: 387   reward: -2009
 # episode: 489   reward: -1006
@@ -23,7 +23,7 @@ DISPLAY_REWARD_THRESHOLD = -2000  # renders environment if total episode reward 
 RENDER = False  # rendering wastes time
 
 env = gym.make('MountainCar-v0')
-env.seed(1)     # reproducible, general Policy gradient has high variance
+env.seed(1)     # 在屏幕上显示模拟窗口会拖慢运行速度, 我们等计算机学得差不多了再显示模拟
 env = env.unwrapped
 
 print(env.action_space)

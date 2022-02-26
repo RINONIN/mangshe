@@ -29,7 +29,7 @@ MEMORY_CAPACITY = 10000
 BATCH_SIZE = 32
 
 RENDER = False
-ENV_NAME = 'Pendulum-v0'
+ENV_NAME = 'Pendulum-v1'
 
 
 ###############################  DDPG  ####################################

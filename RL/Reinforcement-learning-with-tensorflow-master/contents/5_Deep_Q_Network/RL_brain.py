@@ -71,12 +71,12 @@ class DeepQNetwork:
         self.cost_his = []  # 记录所有 cost 变化, 用于最后 plot 出来观看
 
     def _build_net(self):
-        # ------------------ build evaluate_net ------------------
-        self.s = tf.compat.v1.placeholder(tf.float32, [None, self.n_features], name='s')  # input
+        # ------------------ build evaluate_net ------------------ 及时提升参数
+        self.s = tf.compat.v1.placeholder(tf.float32, [None, self.n_features], name='s')  # input 用来接受observation
         self.q_target = tf.compat.v1.placeholder(tf.float32, [None, self.n_actions],
-                                                 name='Q_target')  # for calculating loss
+                                                 name='Q_target')  # for calculating loss 用来接收 q_target 的值, 这个之后会通过计算得到
         with tf.compat.v1.variable_scope('eval_net'):
-            # c_names(collections_names) are the collections to store variables
+            # c_names(collections_names) are the collections to store variables 是在更新 target_net 参数时会用到
             c_names, n_l1, w_initializer, b_initializer = \
                 ['eval_net_params', tf.compat.v1.GraphKeys.GLOBAL_VARIABLES], 10, \
                 tf.random_normal_initializer(0., 0.3), tf.constant_initializer(0.1)  # config of layers
@@ -96,12 +96,12 @@ class DeepQNetwork:
                                                collections=c_names)
                 self.q_eval = tf.matmul(l1, w2) + b2
 
-        with tf.compat.v1.variable_scope('loss'):
+        with tf.compat.v1.variable_scope('loss'):   # 求误差
             self.loss = tf.reduce_mean(tf.compat.v1.squared_difference(self.q_target, self.q_eval))
-        with tf.compat.v1.variable_scope('train'):
+        with tf.compat.v1.variable_scope('train'):  # 梯度下降
             self._train_op = tf.compat.v1.train.RMSPropOptimizer(self.lr).minimize(self.loss)
 
-        # ------------------ build target_net ------------------
+        # ------------------ build target_net ------------------ 提供 target Q
         self.s_ = tf.compat.v1.placeholder(tf.float32, [None, self.n_features], name='s_')  # input
         with tf.compat.v1.variable_scope('target_net'):
             # c_names(collections_names) are the collections to store variables

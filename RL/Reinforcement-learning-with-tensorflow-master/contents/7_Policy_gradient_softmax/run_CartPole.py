@@ -39,7 +39,8 @@ for i_episode in range(3000):
     observation = env.reset()
 
     while True:
-        if RENDER: env.render()
+        if RENDER:
+            env.render()
 
         action = RL.choose_action(observation)
 
@@ -54,7 +55,8 @@ for i_episode in range(3000):
                 running_reward = ep_rs_sum
             else:
                 running_reward = running_reward * 0.99 + ep_rs_sum * 0.01
-            if running_reward > DISPLAY_REWARD_THRESHOLD: RENDER = True  # 判断是否显示模拟
+            if running_reward > DISPLAY_REWARD_THRESHOLD:
+                RENDER = True  # 判断是否显示模拟
             print("episode:", i_episode, "  reward:", int(running_reward))
 
             vt = RL.learn()  # 学习, 输出 vt, 我们下节课讲这个 vt 的作用

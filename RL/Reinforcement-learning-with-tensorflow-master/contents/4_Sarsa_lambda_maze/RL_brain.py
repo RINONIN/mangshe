@@ -15,7 +15,6 @@ class RL(object):
         self.lr = learning_rate
         self.gamma = reward_decay
         self.epsilon = e_greedy
-
         self.q_table = pd.DataFrame(columns=self.actions, dtype=np.float64)
 
     def check_state_exist(self, state):
@@ -47,13 +46,13 @@ class RL(object):
 
 
 # backward eligibility traces
-class SarsaLambdaTable(RL):
-    def __init__(self, actions, learning_rate=0.01, reward_decay=0.9, e_greedy=0.9, trace_decay=0.9):
+class SarsaLambdaTable(RL):  # 继承 RL class
+    def __init__(self, actions, learning_rate=0.01, reward_decay=0.9, e_greedy=0.9, trace_decay=0.9):  # trace_decay 就是λ
         super(SarsaLambdaTable, self).__init__(actions, learning_rate, reward_decay, e_greedy)
 
-        # backward view, eligibility trace.
-        self.lambda_ = trace_decay
-        self.eligibility_trace = self.q_table.copy()
+        #  后向观测算法, eligibility trace.
+        self.lambda_ = trace_decay  # λ值
+        self.eligibility_trace = self.q_table.copy()  # 空的 eligibility trace 表
 
     def check_state_exist(self, state):
         if state not in self.q_table.index:
@@ -65,7 +64,7 @@ class SarsaLambdaTable(RL):
                 )
             self.q_table = self.q_table.append(to_be_append)
 
-            # also update eligibility trace
+            # 同时也更新 eligibility trace
             self.eligibility_trace = self.eligibility_trace.append(to_be_append)
 
     def learn(self, s, a, r, s_, a_):
@@ -81,6 +80,7 @@ class SarsaLambdaTable(RL):
 
         # Method 1:
         # self.eligibility_trace.loc[s, a] += 1
+        # 对于经历过的 state-action, 我们让他+1, 证明他是得到 reward 路途中不可或缺的一环
 
         # Method 2:
         self.eligibility_trace.loc[s, :] *= 0
@@ -89,5 +89,5 @@ class SarsaLambdaTable(RL):
         # Q update
         self.q_table += self.lr * error * self.eligibility_trace
 
-        # decay eligibility trace after update
+        # 随着时间衰减 eligibility trace 的值, 离获取 reward 越远的步, 他的"不可或缺性"越小
         self.eligibility_trace *= self.gamma*self.lambda_

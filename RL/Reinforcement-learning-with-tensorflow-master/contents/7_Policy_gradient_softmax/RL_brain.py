@@ -26,8 +26,8 @@ class PolicyGradient:
             self,
             n_actions,
             n_features,
-            learning_rate=0.01,
-            reward_decay=0.95,
+            learning_rate=0.01,  # 学习率
+            reward_decay=0.95,  # reward递减率
             output_graph=False,
     ):
         self.n_actions = n_actions
@@ -49,13 +49,14 @@ class PolicyGradient:
 
         self.sess.run(tf.compat.v1.global_variables_initializer())
 
-    def _build_net(self):
+    def _build_net(self):  # 建立神经网络
         with tf.name_scope('inputs'):
-            self.tf_obs = tf.compat.v1.placeholder(tf.float32, [None, self.n_features], name="observations")
             # 接收 observation
-            self.tf_acts = tf.compat.v1.placeholder(tf.int32, [None, ], name="actions_num")   # 接收我们在这个回合中选过的 actions
-            self.tf_vt = tf.compat.v1.placeholder(tf.float32, [None, ], name="actions_value")  # 接收每个 state-action
-            # 所对应的 value (通过 reward 计算)
+            self.tf_obs = tf.compat.v1.placeholder(tf.float32, [None, self.n_features], name="observations")
+            # 接收我们在这个回合中选过的 actions
+            self.tf_acts = tf.compat.v1.placeholder(tf.int32, [None, ], name="actions_num")
+            # 接收每个 state-action所对应的 value (通过 reward 计算)
+            self.tf_vt = tf.compat.v1.placeholder(tf.float32, [None, ], name="actions_value")
         # fc1
         layer = tf.compat.v1.layers.dense(
             inputs=self.tf_obs,
@@ -79,7 +80,7 @@ class PolicyGradient:
 
         with tf.name_scope('loss'):
             # 最大化 总体 reward (log_p * R) 就是在最小化 -(log_p * R), 而 tf 的功能里只有最小化 loss
-            neg_log_prob = tf.nn.sparse_softmax_cross_entropy_with_logits(logits=all_act, labels=self.tf_acts)   # 所选 action 的概率 -log 值
+            neg_log_prob = tf.nn.sparse_softmax_cross_entropy_with_logits(logits=all_act, labels=self.tf_acts)  # 所选 action 的概率 -log 值
             # 下面的方式是一样的:
             # neg_log_prob = tf.reduce_sum(-tf.log(self.all_act_prob)*tf.one_hot(self.tf_acts, self.n_actions), axis=1)
             loss = tf.reduce_mean(neg_log_prob * self.tf_vt)  # (vt = 本reward + 衰减的未来reward) 引导参数的梯度下降

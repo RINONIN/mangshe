@@ -43,21 +43,21 @@ class Actor(object):
 
         self.s = tf.compat.v1.placeholder(tf.float32, [1, n_features], "state")
         self.a = tf.compat.v1.placeholder(tf.int32, None, "act")
-        self.td_error = tf.compat.v1.placeholder(tf.float32, None, "td_error")  # TD_error
+        self.td_error = tf.compat.v1.placeholder(tf.float32, None, "td_error")  # TD_error =TD_error = (r + v_) - v
 
         with tf.compat.v1.variable_scope('Actor'):
             l1 = tf.compat.v1.layers.dense(
                 inputs=self.s,
-                units=20,  # number of hidden units
+                units=20,  # 隐含层节点数
                 activation=tf.nn.relu,
-                kernel_initializer=tf.compat.v1.random_normal_initializer(0., .1),  # weights
+                kernel_initializer=tf.compat.v1.random_normal_initializer(0., .1),  # 权重
                 bias_initializer=tf.compat.v1.constant_initializer(0.1),  # biases
                 name='l1'
             )
 
             self.acts_prob = tf.compat.v1.layers.dense(
                 inputs=l1,
-                units=n_actions,  # output units
+                units=n_actions,  # 输出节点
                 activation=tf.nn.softmax,  # get action probabilities
                 kernel_initializer=tf.random_normal_initializer(0., .1),  # weights
                 bias_initializer=tf.constant_initializer(0.1),  # biases
@@ -83,7 +83,7 @@ class Actor(object):
 
     def choose_action(self, s):
         s = s[np.newaxis, :]
-        probs = self.sess.run(self.acts_prob, {self.s: s})  # get probabilities for all actions
+        probs = self.sess.run(self.acts_prob, {self.s: s})  # 获取所有动作的概率
         return np.random.choice(np.arange(probs.shape[1]), p=probs.ravel())  # return a int
 
 
@@ -134,8 +134,8 @@ class Critic(object):
 sess = tf.compat.v1.Session()
 
 actor = Actor(sess, n_features=N_F, n_actions=N_A, lr=LR_A)
-critic = Critic(sess, n_features=N_F,
-                lr=LR_C)  # we need a good teacher, so the teacher should learn faster than the actor
+critic = Critic(sess, n_features=N_F,lr=LR_C)
+# we need a good teacher, so the teacher should learn faster than the actor
 
 sess.run(tf.compat.v1.global_variables_initializer())
 
